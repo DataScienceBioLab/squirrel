@@ -1,0 +1,160 @@
+# Client Portal Configuration
+
+server:
+  host: localhost
+  port: 3000
+  ssl: true
+
+authentication:
+  provider: auth0
+  domain: ${AUTH0_DOMAIN}
+  clientId: ${AUTH0_CLIENT_ID}
+  clientSecret: ${AUTH0_CLIENT_SECRET}
+
+services:
+  calendly:
+    apiKey: ${CALENDLY_API_KEY}
+    webhook_url: /api/webhooks/calendly
+
+  stripe:
+    publicKey: ${STRIPE_PUBLIC_KEY}
+    secretKey: ${STRIPE_SECRET_KEY}
+    webhookSecret: ${STRIPE_WEBHOOK_SECRET}
+    products:
+      code_review:
+        name: "Code Review Package"
+        price_id: ${STRIPE_CODE_REVIEW_PRICE_ID}
+      mcp_consultation:
+        name: "MCP Integration Package"
+        price_id: ${STRIPE_MCP_CONSULTATION_PRICE_ID}
+
+  github:
+    app_id: ${GITHUB_APP_ID}
+    private_key: ${GITHUB_PRIVATE_KEY}
+    webhook_secret: ${GITHUB_WEBHOOK_SECRET}
+
+email:
+  provider: sendgrid
+  apiKey: ${SENDGRID_API_KEY}
+  templates:
+    welcome: "d-welcome-template-id"
+    review_complete: "d-review-complete-template-id"
+    consultation_scheduled: "d-consultation-scheduled-template-id"
+
+storage:
+  provider: aws
+  bucket: ${AWS_S3_BUCKET}
+  region: ${AWS_REGION}
+  access_key: ${AWS_ACCESS_KEY}
+  secret_key: ${AWS_SECRET_KEY}
+
+features:
+  dashboard:
+    enabled: true
+    components:
+      - project_status
+      - review_history
+      - scheduled_calls
+      - invoices
+      - documents
+
+  projects:
+    enabled: true
+    github_integration: true
+    file_upload: true
+    max_file_size: 50MB
+
+  scheduling:
+    enabled: true
+    calendly_integration: true
+    buffer_time: 30m
+    availability:
+      timezone: UTC
+      working_hours:
+        - day: Monday-Friday
+          start: "09:00"
+          end: "17:00"
+
+  payments:
+    enabled: true
+    currencies: [USD]
+    auto_invoice: true
+    payment_methods:
+      - card
+      - bank_transfer
+
+  notifications:
+    email: true
+    in_app: true
+    slack: false
+
+workflows:
+  code_review:
+    steps:
+      - name: Repository Access
+        type: github_integration
+        required: true
+      
+      - name: Initial Analysis
+        type: automated_analysis
+        timeout: 30m
+        
+      - name: Report Generation
+        type: report_generation
+        template: code_review
+        
+      - name: Human Review
+        type: manual_review
+        timeout: 24h
+        
+      - name: Client Delivery
+        type: email_notification
+        template: review_complete
+
+  mcp_consultation:
+    steps:
+      - name: Questionnaire
+        type: form_submission
+        template: mcp_questionnaire
+        
+      - name: Analysis
+        type: automated_analysis
+        timeout: 1h
+        
+      - name: Recommendations
+        type: report_generation
+        template: mcp_recommendations
+        
+      - name: Scheduling
+        type: calendly_booking
+        duration: 30m
+
+security:
+  rateLimit:
+    enabled: true
+    max: 100
+    window: 15m
+    
+  cors:
+    enabled: true
+    origins:
+      - https://app.datasciencebiolab.com
+      - https://api.datasciencebiolab.com
+
+  csrf:
+    enabled: true
+    
+  headers:
+    hsts: true
+    xss_protection: true
+    content_security_policy: true
+
+monitoring:
+  enabled: true
+  provider: datadog
+  api_key: ${DATADOG_API_KEY}
+  metrics:
+    - api_latency
+    - error_rates
+    - user_sessions
+    - review_completion_time 
