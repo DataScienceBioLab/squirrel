@@ -1,7 +1,7 @@
 ---
-version: 1.1.0
-last_updated: 2024-03-10
-status: in_progress
+version: 1.2.0
+last_updated: 2024-03-15
+status: rebuilding
 priority: high
 ---
 
@@ -10,91 +10,63 @@ priority: high
 ## Introduction
 This document provides an overview of the Minimal Viable Product (MVP) for the Groundhog AI Coding Assistant. The MVP focuses on delivering essential functionality while maintaining reliability, security, and usability.
 
-## Current Progress Overview
-Overall MVP Progress: 85% Complete
+## Current Status: 🔄 REBUILDING
+The project is undergoing a rebuild to ensure a more robust and maintainable foundation.
 
 ## MVP Components
 
-### Core Features (90% Complete)
-- [x] Command system with essential commands
-- [x] Context management system
-- [x] Error handling and recovery
+### Core Features (In Progress)
+- [ ] Command system with essential commands
+- [ ] Context management system
+- [ ] Error handling and recovery
 - [ ] Performance optimization
 - See [01-core-features.md](01-core-features.md) for details
 
-### MCP Features (85% Complete)
-- [x] Protocol implementation
-- [x] Tool management system
-- [x] Basic security measures
-- [x] Context management
-- [ ] Advanced security features
+### MCP Features (In Progress)
+- [ ] Protocol implementation
+- [ ] Tool management system
+- [ ] Basic security measures
+- [ ] Context management
 - See [02-mcp-features.md](02-mcp-features.md) for details
 
-### UI Features (85% Complete)
-- [x] Essential terminal UI components
-- [x] Input/output handling
-- [x] Progress and status indicators
-- [x] Basic accessibility support
-- [ ] Performance optimization
-- See [03-ui-features.md](03-ui-features.md) for details
+### UI Features (Sunsetted)
+- UI features have been sunsetted as part of the MVP scope adjustment
+- See [03-ui-features_sunsetted.md](03-ui-features_sunsetted.md) for historical reference
 
 ## Implementation Status
 
-### Completed Features
+### Current Focus
 1. Core Command System
-   - Command registration and execution
-   - Command validation and hooks
+   - Basic command registration and execution
+   - Command validation framework
    - Help system implementation
 
 2. MCP Implementation
-   - Message format and handling
+   - Basic message format and handling
    - Tool lifecycle management
-   - Basic security measures
-   - Context synchronization
+   - Security foundation
 
-3. User Interface
-   - Essential widgets and components
-   - Input/output management
-   - Progress tracking
-   - Accessibility features
+### Planned Features
+1. Core System
+   - Command history
+   - Advanced validation
+   - Performance optimization
 
-### Remaining Tasks
-1. Performance Optimization (3 days)
-   - Command execution optimization
-   - UI rendering improvements
-   - Memory usage optimization
+2. MCP Protocol
+   - Advanced security features
+   - Enhanced tool management
+   - Improved context handling
 
-2. Security Enhancements (2 days)
-   - Enhanced authentication
-   - Tool sandboxing
-   - Resource monitoring
+## Performance Targets
+- Command execution: < 50ms
+- Memory usage: < 100MB
+- Error rate: < 1%
 
-3. Final Polish (2 days)
-   - UI refinements
-   - Documentation updates
-   - Final testing
-
-## Performance Metrics
-
-### Current Performance
-- Command execution: ~45ms (Target: <50ms)
-- UI responsiveness: ~30ms (Target: <33ms)
-- Memory usage: ~85MB (Target: <100MB)
-- Error rate: <0.5% (Target: <1%)
-
-### Reliability Metrics
-- System uptime: 99.9%
-- Error recovery rate: 99.5%
-- Data integrity: 100%
-
-## Success Criteria Status
-- [x] Essential commands working reliably
-- [x] Basic AI assistance functional
-- [x] Stable MCP communication
-- [x] Responsive UI
-- [x] Clear command feedback
-- [x] Intuitive interface
-- [x] Basic accessibility support
+## Success Criteria
+- [ ] Essential commands working reliably
+- [ ] Basic AI assistance functional
+- [ ] Stable MCP communication
+- [ ] Clear command feedback
 - [ ] Performance targets met
 
 ## Dependencies
@@ -103,16 +75,22 @@ Overall MVP Progress: 85% Complete
   - tokio = "1.0"
   - serde = "1.0"
   - thiserror = "1.0"
-  - crossterm = "0.25"
-  - tui = "0.19"
 
-## Timeline Update
-- Core Features: Completed
-- MCP Features: Completed
-- UI Features: Completed
-- Performance Optimization: 3 days remaining
-- Security Enhancements: 2 days remaining
-- Final Testing: 2 days
+## Timeline
+- Phase 1: Core System (Week 1)
+  - Command system foundation
+  - Basic context management
+  - Error handling framework
+
+- Phase 2: MCP Protocol (Week 2)
+  - Protocol implementation
+  - Tool management
+  - Security foundation
+
+- Phase 3: Polish & Testing (Week 3)
+  - Performance optimization
+  - Security hardening
+  - Documentation
 
 ## Post-MVP Roadmap
 1. Enhanced AI Capabilities
@@ -136,10 +114,9 @@ Overall MVP Progress: 85% Complete
    - Audit logging
 
 ## Notes
-- System is stable and operational
-- Focus on performance optimization
+- Focus on core functionality first
 - Maintain high code quality
-- Document all features thoroughly
-- Regular security audits
+- Document as we build
+- Regular security reviews
 - Monitor resource usage
-- Continuous testing and validation 
+- Continuous testing 
