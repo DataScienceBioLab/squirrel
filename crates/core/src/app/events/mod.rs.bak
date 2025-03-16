@@ -44,10 +44,13 @@ impl std::str::FromStr for EventType {
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "system" => Ok(Self::SystemStartup),
-            "command" | "info" => Ok(Self::MetricCollected),
-            "state" | "debug" => Ok(Self::HealthCheckCompleted),
+            "command" => Ok(Self::MetricCollected),
+            "state" => Ok(Self::HealthCheckCompleted),
             "error" => Ok(Self::AlertTriggered),
-            "warning" | "trace" => Ok(Self::SystemShutdown),
+            "warning" => Ok(Self::SystemShutdown),
+            "info" => Ok(Self::MetricCollected),
+            "debug" => Ok(Self::HealthCheckCompleted),
+            "trace" => Ok(Self::SystemShutdown),
             _ => Err(EventError::InvalidType(s.to_string())),
         }
     }
@@ -175,14 +178,12 @@ impl EventBuilder {
     }
 
     /// Set the correlation ID
-    #[must_use]
     pub fn with_correlation_id(mut self, correlation_id: String) -> Self {
         self.metadata.correlation_id = Some(correlation_id);
         self
     }
 
     /// Add a label to the metadata
-    #[must_use]
     pub fn with_label(mut self, key: String, value: String) -> Self {
         self.metadata.labels.insert(key, value);
         self
@@ -278,11 +279,6 @@ impl EventBus {
         }
     }
 
-    /// Publish an event to the event bus
-    ///
-    /// # Errors
-    ///
-    /// Returns an `EventError` if the event cannot be published
     pub async fn publish(&self, event: Event) -> Result<()> {
         let mut events = self.events.write().await;
         events.push(event.clone());
@@ -295,11 +291,6 @@ impl EventBus {
         Ok(())
     }
 
-    /// Subscribe to events on the event bus
-    ///
-    /// # Errors
-    ///
-    /// Returns an `EventError` if the subscription cannot be registered
     pub async fn subscribe<F>(&self, handler: F) -> Result<()>
     where
         F: Fn(&Event) + Send + Sync + 'static,
@@ -309,21 +300,11 @@ impl EventBus {
         Ok(())
     }
 
-    /// Get all events from the event bus
-    ///
-    /// # Errors
-    ///
-    /// Returns an `EventError` if the events cannot be retrieved
     pub async fn get_events(&self) -> Result<Vec<Event>> {
         let events = self.events.read().await;
         Ok(events.clone())
     }
 
-    /// Clear all events from the event bus
-    ///
-    /// # Errors
-    ///
-    /// Returns an `EventError` if the events cannot be cleared
     pub async fn clear_events(&self) -> Result<()> {
         let mut events = self.events.write().await;
         events.clear();
@@ -338,21 +319,13 @@ impl Default for EventBus {
 }
 
 /// Initialize the event system
-///
-/// # Errors
-///
-/// Returns an `EventError` if the event system cannot be initialized
-pub fn initialize() -> Result<()> {
+pub async fn initialize() -> Result<()> {
     // TODO: Initialize event system
     Ok(())
 }
 
 /// Shutdown the event system
-///
-/// # Errors
-///
-/// Returns an `EventError` if the event system cannot be shut down properly
-pub fn shutdown() -> Result<()> {
+pub async fn shutdown() -> Result<()> {
     // TODO: Cleanup event system resources
     Ok(())
 }
@@ -374,13 +347,11 @@ impl EventMetadata {
         }
     }
     
-    #[must_use]
     pub fn with_correlation_id(mut self, correlation_id: String) -> Self {
         self.correlation_id = Some(correlation_id);
         self
     }
     
-    #[must_use]
     pub fn with_label(mut self, key: String, value: String) -> Self {
         self.labels.insert(key, value);
         self
@@ -410,6 +381,46 @@ pub trait EventEmitter: Send + Sync {
     async fn emit(&self, event: Event) -> Result<()>;
 }
 
+/// Default implementation of the EventEmitter trait
+#[derive(Debug)]
+pub struct DefaultEventEmitter {
+    handlers: Arc<RwLock<Vec<Box<dyn EventHandler + Send + Sync>>>>,
+}
+
+impl DefaultEventEmitter {
+    pub fn new() -> Self {
+        Self {
+            handlers: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+    
+    pub async fn register_handler<H>(&self, handler: H) -> Result<()>
+    where
+        H: EventHandler + Send + Sync + 'static,
+    {
+        let mut handlers = self.handlers.write().await;
+        handlers.push(Box::new(handler));
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl EventEmitter for DefaultEventEmitter {
+    async fn emit(&self, event: Event) -> Result<()> {
+        let handlers = self.handlers.read().await;
+        for handler in handlers.iter() {
+            handler.handle(event.clone()).await?;
+        }
+        Ok(())
+    }
+}
+
+impl Default for DefaultEventEmitter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Default implementation of the `EventEmitter` trait
 #[derive(Debug)]
 pub struct DefaultEventEmitter {
@@ -423,11 +434,6 @@ impl DefaultEventEmitter {
         }
     }
     
-    /// Register a new event handler
-    ///
-    /// # Errors
-    ///
-    /// Returns an `EventError` if the handler cannot be registered
     pub async fn register_handler<H>(&self, handler: H) -> Result<()>
     where
         H: EventHandler + Send + Sync + 'static,
