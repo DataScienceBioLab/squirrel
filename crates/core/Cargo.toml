@@ -3,57 +3,33 @@ name = "squirrel-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description.workspace = true
+description = "Core functionality for Squirrel"
 
 [dependencies]
 # Core dependencies
 tokio = { workspace = true, features = ["full"], optional = true }
 futures = { workspace = true }
 async-trait = { workspace = true }
-thiserror.workspace = true
+thiserror = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
-sled = { workspace = true }
-rand = { workspace = true }
-ring = { workspace = true }
-clap = { version = "4.5", features = ["derive"] }
-regex = "1.10"
-sysinfo = "0.30"
-time = { workspace = true }
-prometheus = { workspace = true }
-handlebars = { workspace = true }
-sha2 = "0.10"
-opentelemetry = "0.20"
-opentelemetry_sdk = { version = "0.20", features = ["metrics", "rt-tokio"] }
-reqwest = { version = "0.11", features = ["json"] }
 
-# Monitoring and logging
+# Logging dependencies
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-
-# MCP dependencies
-bytes = { workspace = true }
-futures-util = { workspace = true }
-tokio-util = { workspace = true }
-
-# Compression dependencies
-zstd = { version = "0.13", features = ["zstdmt"] }
-flate2 = { version = "1.0", features = ["zlib"] }
-lz4 = "1.24"
 log = "0.4.26"
-hex = "0.4.3"
 
 [dev-dependencies]
-tokio-test = "0.4.2"
-tempfile = "3.8.0"
+tokio-test = { workspace = true }
+tempfile = { workspace = true }
 mockall = { workspace = true }
 criterion = { workspace = true }
 insta = { workspace = true }
 snapbox = { workspace = true }
-proptest = "1.6.0"
+proptest = { workspace = true }
 
 [features]
 default = ["async"]
