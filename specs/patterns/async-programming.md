@@ -1,7 +1,7 @@
 ---
 description: Standard Async Programming pattern for the Squirrel codebase
-version: 1.0.0
-last_updated: 2024-03-21
+version: 1.1.0
+last_updated: 2024-03-30
 status: active
 ---
 
@@ -154,6 +154,93 @@ pub async fn process_with_limit(
 }
 ```
 
+### Async Mutex Usage
+
+When using mutexes in async code, always use tokio's async-aware alternatives and follow these patterns:
+
+```rust
+use tokio::sync::{Mutex, RwLock};
+use std::sync::Arc;
+
+pub struct AsyncSafeState {
+    data: Arc<RwLock<HashMap<String, String>>>,
+}
+
+impl AsyncSafeState {
+    // Good: Minimizing lock duration
+    pub async fn get_value(&self, key: &str) -> Option<String> {
+        let value = {
+            let data = self.data.read().await;
+            data.get(key).cloned()
+        }; // Lock is dropped here
+        
+        value
+    }
+    
+    // Good: Not holding lock across await points
+    pub async fn update_value(&self, key: String, value: String) -> Result<(), StateError> {
+        {
+            let mut data = self.data.write().await;
+            data.insert(key, value);
+        } // Lock is dropped here
+        
+        // Persistence happens after lock is released
+        self.persist_changes().await
+    }
+    
+    // Bad: Holding lock across await point
+    pub async fn update_value_unsafe(&self, key: String, value: String) -> Result<(), StateError> {
+        let mut data = self.data.write().await;
+        data.insert(key, value);
+        
+        // Lock is held during await! This can cause deadlocks and performance issues
+        self.persist_changes().await
+    }
+}
+```
+
+#### Best Practices for Async Locks
+
+1. **Minimize Lock Duration**:
+   - Keep lock scopes as small as possible
+   - Use explicit scope blocks to make lock lifetimes clear
+
+2. **Never Hold Locks Across .await Points**:
+   - Release locks before any awaited operation
+   - Clone or copy data if needed for processing after lock release
+
+3. **Use Tokio's Async-Aware Locks**:
+   - `tokio::sync::Mutex` instead of `std::sync::Mutex`
+   - `tokio::sync::RwLock` instead of `std::sync::RwLock`
+
+4. **Separate Read and Write Operations**:
+   - Use read locks when possible
+   - Convert to write locks only when needed
+   - Don't hold read locks when you'll need a write lock later (to prevent deadlocks)
+
+5. **Avoid Recursive Locking**:
+   - Design APIs to prevent recursive lock acquisition
+   - Restructure code to eliminate lock hierarchies where possible
+
+```rust
+// Good: Two-phase locking approach
+pub async fn process_data(&self) -> Result<(), ProcessingError> {
+    // Phase 1: Read and decide if update needed (with minimal lock duration)
+    let should_update = {
+        let data = self.state.read().await;
+        data.needs_update()
+    }; // Read lock released
+    
+    // Phase 2: Update if needed (with minimal write lock duration)
+    if should_update {
+        let mut data = self.state.write().await;
+        data.update();
+    } // Write lock released
+    
+    Ok(())
+}
+```
+
 ## Benefits
 
 - **Concurrency**: Efficiently handle many operations simultaneously
@@ -251,7 +338,10 @@ When migrating from synchronous code:
 5. Ensure proper error propagation with `?` operator
 6. Add appropriate timeouts and resource limits
 7. Update tests to use async test frameworks
+8. Replace standard mutexes with tokio's async-aware alternatives
+9. Ensure locks are not held across await points
 
 ## Version History
 
-- 1.0.0 (2024-03-21): Initial version 
+- 1.0.0 (2024-03-21): Initial version
+- 1.1.0 (2024-03-30): Added comprehensive async mutex usage patterns and best practices based on context system refactoring 

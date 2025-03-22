@@ -1,7 +1,7 @@
 ---
-version: 1.0.0
-last_updated: 2024-03-23
-status: draft
+version: 1.1.0
+last_updated: 2024-03-31
+status: active
 priority: high
 ---
 
@@ -114,6 +114,98 @@ impl ComponentWithEvents {
 - Easier to add new components without changing existing ones
 - Simplified scaling and distribution
 - Better handling of asynchronous operations
+
+#### C. Async Concurrency Pattern
+Components interact safely in an async environment using proper concurrency controls:
+
+```rust
+// Thread-safe component with async-aware locking
+pub struct ThreadSafeComponent {
+    // Use tokio's async-aware RwLock for read-heavy state
+    shared_state: Arc<RwLock<HashMap<String, Value>>>,
+    // Use tokio's Mutex for write-heavy or exclusive access state
+    internal_counters: Arc<Mutex<Vec<u64>>>,
+}
+
+impl ThreadSafeComponent {
+    // Safe async read operation with minimal lock duration
+    pub async fn get_value(&self, key: &str) -> Option<Value> {
+        // Scope the lock to minimize duration
+        let value = {
+            let state = self.shared_state.read().await;
+            state.get(key).cloned()
+        }; // Lock is dropped here
+        
+        value
+    }
+    
+    // Safe async write operation without holding lock across await points
+    pub async fn set_value(&self, key: String, value: Value) -> Result<(), Error> {
+        // First phase: Update state with minimal lock duration
+        {
+            let mut state = self.shared_state.write().await;
+            state.insert(key, value);
+        } // Write lock is dropped here
+        
+        // Second phase: Perform async operations without holding lock
+        self.notify_change().await?;
+        
+        Ok(())
+    }
+    
+    // Process concurrent operations with controlled parallelism
+    pub async fn process_concurrent_operations(
+        &self, 
+        operations: Vec<Operation>,
+        max_concurrent: usize
+    ) -> Result<Vec<OperationResult>, Error> {
+        // Create semaphore to limit concurrent operations
+        let semaphore = Arc::new(Semaphore::new(max_concurrent));
+        let mut handles = Vec::with_capacity(operations.len());
+        
+        // Launch tasks with controlled concurrency
+        for operation in operations {
+            let semaphore_clone = Arc::clone(&semaphore);
+            let component = self.clone();
+            
+            let handle = tokio::spawn(async move {
+                // Acquire permit, limiting concurrency
+                let _permit = semaphore_clone.acquire().await.unwrap();
+                
+                // Process operation
+                component.process_single_operation(operation).await
+            });
+            
+            handles.push(handle);
+        }
+        
+        // Collect results maintaining order
+        let mut results = Vec::with_capacity(handles.len());
+        for handle in handles {
+            match handle.await {
+                Ok(Ok(result)) => results.push(result),
+                Ok(Err(e)) => return Err(e),
+                Err(e) => return Err(Error::JoinError(e.to_string())),
+            }
+        }
+        
+        Ok(results)
+    }
+}
+```
+
+**When to Use:**
+- For components that use async operations and shared state
+- When implementing services that handle concurrent requests
+- For any state that may be accessed by multiple async tasks
+
+**Benefits:**
+- Thread-safe state management in async code
+- Proper handling of async locks to prevent deadlocks
+- Controlled parallelism with backpressure
+- Clear patterns for non-blocking operations
+
+**Reference Implementation:** [Async Concurrency Integration Pattern](async-concurrency-integration.md)
 
 ### 2. State Management Patterns
 
@@ -247,6 +339,92 @@ impl ComponentWithLocalState {
 - Resilience to network issues
 - Reduced contention on central state
 - Control over synchronization frequency
+
+#### C. Context-Based State Pattern
+Components access and update state through a managed context system:
+
+```rust
+// Context-aware component
+pub struct ContextAwareComponent {
+    context_manager: Arc<ContextManager>,
+    component_id: ComponentId,
+}
+
+impl ContextAwareComponent {
+    // Perform operation with context
+    pub async fn perform_operation(
+        &self,
+        context_id: ContextId,
+        params: OperationParams
+    ) -> Result<OperationResult, Error> {
+        // Get context for this operation
+        let context = self.context_manager.get_context(context_id).await?;
+        
+        // Check permissions in context
+        if !context.has_permission(self.component_id, Permission::Execute) {
+            return Err(Error::PermissionDenied);
+        }
+        
+        // Read state from context
+        let config = context.state().get::<Config>("config")?;
+        
+        // Perform operation with context state
+        let result = self.execute_with_config(&config, params).await?;
+        
+        // Update context with operation results
+        self.context_manager
+            .update_context(context_id, |ctx| {
+                // Update state atomically
+                ctx.set("last_result", &result)?;
+                ctx.set("last_operation_time", Utc::now())?;
+                Ok(())
+            })
+            .await?;
+        
+        Ok(result)
+    }
+    
+    // Listen for context changes
+    pub async fn start_context_monitoring(&self, context_id: ContextId) -> Result<(), Error> {
+        // Subscribe to context events
+        let mut events = self.context_manager
+            .subscribe_context_events(context_id)
+            .await?;
+        
+        // Handle context updates
+        tokio::spawn(async move {
+            while let Some(event) = events.recv().await {
+                match event {
+                    ContextEvent::Updated { id, changes } => {
+                        if changes.contains_key("config") {
+                            // React to config changes
+                            self.on_config_updated(id).await
+                                .unwrap_or_else(|e| log::error!("Failed to update: {}", e));
+                        }
+                    },
+                    // Handle other events
+                    _ => {},
+                }
+            }
+        });
+        
+        Ok(())
+    }
+}
+```
+
+**When to Use:**
+- When components need to share state with clear access boundaries
+- For systems with complex permission requirements
+- When integrating with protocol handlers like MCP
+
+**Benefits:**
+- Centralized state management with clear ownership
+- Permission-based access control
+- Event-driven updates
+- Transactional state changes
+
+**Reference Implementation:** [MCP-Context Integration Pattern](mcp-context-integration.md)
 
 ### 3. Error Handling Patterns
 
@@ -702,4 +880,148 @@ When migrating components to use these patterns:
 
 These integration patterns provide a foundation for building robust, maintainable component interactions within the Squirrel platform. By consistently applying these patterns, teams can ensure that components interact properly, handle errors gracefully, and manage state effectively.
 
-<version>1.0.0</version> 
+## Protocol Integration Patterns
+
+### A. MCP-Context Integration Pattern
+Components interact with the Machine Context Protocol through a context-aware interface:
+
+```rust
+// MCP Session with Context integration
+pub struct ManagedSession {
+    session_id: SessionId,
+    context_id: ContextId,
+    context_manager: Arc<ContextManager>,
+}
+
+impl ManagedSession {
+    // Process a tool request with context awareness
+    pub async fn process_tool_request(
+        &self,
+        request: ToolRequest
+    ) -> Result<ToolResponse, Error> {
+        // Use the session's context to process the request
+        let context = self.context_manager.get_context(self.context_id).await?;
+        
+        // Apply context to tool request
+        let contextualized_request = request.with_context(context.clone());
+        
+        // Process the request with the appropriate tool
+        let tool_manager = ToolManager::global();
+        let result = tool_manager.execute_tool(contextualized_request).await?;
+        
+        // Update context with tool execution results if needed
+        if let Some(context_updates) = result.context_updates() {
+            self.context_manager
+                .update_context(self.context_id, |ctx| {
+                    ctx.apply_updates(context_updates)?;
+                    Ok(())
+                })
+                .await?;
+        }
+        
+        Ok(result.into_response())
+    }
+}
+
+// Context-aware command processing
+pub struct ContextualizedCommand<T> {
+    inner: T,
+    context_id: ContextId,
+}
+
+impl<T: Command> Command for ContextualizedCommand<T> {
+    type Input = T::Input;
+    type Output = T::Output;
+    
+    async fn execute(
+        &self,
+        input: Self::Input,
+        cmd_context: &CommandContext
+    ) -> Result<Self::Output, Error> {
+        // Retrieve context for this command execution
+        let context_manager = ContextManager::global();
+        let context = context_manager.get_context(self.context_id).await?;
+        
+        // Enhance command context with our context information
+        let enhanced_context = cmd_context.with_application_context(context);
+        
+        // Execute the inner command with the enhanced context
+        let result = self.inner.execute(input, &enhanced_context).await?;
+        
+        // Update our context if command modified state
+        if let Some(ctx_changes) = enhanced_context.context_changes() {
+            context_manager
+                .update_context(self.context_id, |ctx| {
+                    ctx.apply_changes(ctx_changes)?;
+                    Ok(())
+                })
+                .await?;
+        }
+        
+        Ok(result)
+    }
+}
+```
+
+**When to Use:**
+- When integrating components with the MCP protocol
+- For tools and commands that need context awareness
+- When implementing session management with state persistence
+
+**Benefits:**
+- Clean integration between MCP and Context systems
+- Proper state handling for sessions and tools
+- Consistent context management across protocol boundaries
+- Clear permission boundaries for context access
+
+**Reference Implementation:** [MCP-Context Integration Pattern](mcp-context-integration.md)
+
+## Implementation Guidelines
+
+### 1. Pattern Selection
+
+When integrating components, select the appropriate patterns based on:
+
+- The type of communication needed (direct calls, events, shared state)
+- Performance requirements (latency, throughput)
+- Reliability needs (error handling, retries)
+- Distribution requirements (local vs. distributed)
+
+Use multiple patterns when appropriate, but be consistent within each integration point.
+
+### 2. Error Handling
+
+All integration points should have clear error handling:
+
+- Define specific error types for each integration boundary
+- Implement proper error propagation
+- Document error handling expectations
+- Consider retries for transient failures
+- Provide helpful error messages
+
+### 3. Testing
+
+Each integration pattern implementation should include:
+
+- Unit tests for individual components
+- Integration tests for component pairs
+- System tests for end-to-end flows
+- Performance tests for critical paths
+- Chaos tests for reliability
+
+### 4. Documentation
+
+Document each integration point with:
+
+- Pattern used
+- Responsibility boundaries
+- State ownership
+- Error handling expectations
+- Performance characteristics
+
+## Version History
+
+- 1.0.0 (2024-03-23): Initial version defining core integration patterns
+- 1.1.0 (2024-03-31): Added Async Concurrency and MCP-Context integration patterns
+
+<version>1.1.0</version> 

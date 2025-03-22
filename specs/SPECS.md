@@ -1,7 +1,7 @@
 ---
 description: Architecture and Dependency Specifications for Squirrel MCP
-version: 1.1.0
-last_updated: 2024-03-25
+version: 1.2.0
+last_updated: 2024-03-31
 ---
 
 # Squirrel MCP Architecture Specifications
@@ -43,6 +43,9 @@ squirrel/
 │   ├── context/         # Context Management specs
 │   ├── core/            # Core system specs
 │   ├── integration/     # Integration specs
+│   │   ├── async-concurrency-integration.md    # Async concurrency patterns
+│   │   ├── mcp-context-integration.md          # MCP-context integration
+│   │   └── PATTERNS.md                         # Integration pattern guide
 │   ├── mcp/             # MCP protocol specs
 │   ├── monitoring/      # Monitoring system specs
 │   ├── MVP/             # MVP requirements
@@ -108,11 +111,13 @@ squirrel/
   - Help system foundation
   - Performance optimization in progress
 
-- Context Management: 95% Complete
-  - State tracking
+- Context Management: 100% Complete ✅
+  - State tracking and persistence
   - File system context handling
   - Real-time sync
-  - Recovery features in progress
+  - Recovery features implemented
+  - Async mutex refactoring completed
+  - MCP integration patterns documented
 
 - Error Recovery System: 85% Complete
   - Error handling
@@ -125,14 +130,23 @@ squirrel/
   - Tool lifecycle foundation
   - Security foundation
   - Advanced features in progress
+  - Context integration at 90%
 
 - UI Components: Sunsetted
   - UI features removed from MVP
   - See [specs/MVP/03-ui-features_sunsetted.md](specs/MVP/03-ui-features_sunsetted.md)
 
-- Plugin System: Post-MVP
-  - Moved to post-MVP roadmap
-  - Will be implemented after core stability
+- Plugin System: 60% Complete
+  - Plugin interface defined
+  - Lifecycle management implemented
+  - Async mutex refactoring completed
+  - Security integration in progress
+
+### Integration Patterns
+- **New Integration Patterns Completed**:
+  - Async Concurrency Pattern: [specs/integration/async-concurrency-integration.md](integration/async-concurrency-integration.md)
+  - MCP-Context Integration Pattern: [specs/integration/mcp-context-integration.md](integration/mcp-context-integration.md)
+  - Context-Based State Pattern: [specs/integration/PATTERNS.md](integration/PATTERNS.md#c-context-based-state-pattern)
 
 ### Performance Targets
 - Command execution: < 50ms
@@ -150,29 +164,33 @@ squirrel/
    - Component interoperability testing
    - End-to-end workflow validation
    - Security verification
+   - Apply async concurrency patterns across all components
 
 3. Documentation Finalization
    - API documentation completion
    - User guide creation
    - Developer documentation
+   - Integration pattern guides
 
 ### Implementation Phases
-1. Phase 1: Core System (Week 1)
+1. Phase 1: Core System (Completed)
    - Command system foundation
    - Basic context management
    - Error handling framework
 
-2. Phase 2: MCP Protocol (Week 2)
+2. Phase 2: MCP Protocol (95% Complete)
    - Protocol implementation
    - Tool management
    - Security foundation
 
-3. Phase 3: Polish & Testing (Week 3)
+3. Phase 3: Polish & Testing (In Progress)
    - Performance optimization
    - Security hardening
    - Documentation
+   - Integration patterns implementation
 
 ### Success Criteria
+- [x] Context Management System complete
 - [ ] Essential commands working reliably
 - [ ] Basic AI assistance functional
 - [ ] Stable MCP communication
@@ -196,10 +214,16 @@ The project follows consistent design patterns across all components, documented
 1. **Dependency Injection Pattern** - Used for component composition and testability
 2. **Error Handling Pattern** - Standardized approach for error propagation and recovery
 3. **Async Programming Pattern** - Guidelines for asynchronous code and tokio usage
+   - New async mutex best practices documented
+   - Lock management and concurrency control standardized
 4. **Resource Management Pattern** - Standards for managing system resources
 5. **Schema Design Pattern** - Guidelines for data schema consistency
+6. **Integration Patterns** - Standards for component integration
+   - Context-Based State Pattern
+   - Async Concurrency Pattern
+   - MCP-Context Integration Pattern
 
-See [specs/patterns/README.md](specs/patterns/README.md) for more details.
+See [specs/patterns/README.md](specs/patterns/README.md) and [specs/integration/PATTERNS.md](specs/integration/PATTERNS.md) for more details.
 
 ## Implementation Guidelines
 
@@ -246,23 +270,44 @@ See [specs/patterns/README.md](specs/patterns/README.md) for more details.
 1. **Immediate**
    - [x] Complete core system implementation
    - [x] Finalize MCP protocol implementation
+   - [x] Complete Context Management System
+   - [ ] Apply async concurrency patterns across codebase
+   - [ ] Complete MCP-Context integration
    - [ ] Optimize performance
    - [ ] Complete security hardening
-   - [ ] Finalize documentation
 
-2. **Short Term**
-   - [ ] Complete CLI interface review and implementation
-   - [ ] Finalize web interface design
-   - [ ] Establish comprehensive testing
-   - [ ] Implement integration verification
+2. **Short-term**
+   - [ ] Finalize plugin system implementation
+   - [ ] Complete integration patterns implementation
+   - [ ] Verify security compliance
+   - [ ] Document all integration patterns
 
-3. **Long Term**
-   - [ ] Implement plugin system
-   - [ ] Add advanced AI features
-   - [ ] Optimize performance
-   - [ ] Expand tool ecosystem
+3. **Medium-term**
+   - [ ] Expand integration test coverage
+   - [ ] Release first stable version
+   - [ ] Implement advanced features
+
+## Recent Completions
+
+1. **Context Management System** - March 31, 2024
+   - Completed all core functionality
+   - Implemented async mutex refactoring
+   - Documented integration patterns
+   - Testing coverage exceeds 95%
+
+2. **Integration Patterns** - March 31, 2024
+   - Documented async concurrency patterns
+   - Specified MCP-Context integration
+   - Updated main patterns guide to v1.1.0
 
 ## Version History
+
+- v1.2.0: Updated specifications (2024-03-31)
+  - Updated directory structure
+  - Added implementation status percentages
+  - Added design patterns section
+  - Updated success criteria
+  - Revised current focus areas
 
 - v1.1.0: Updated specifications (2024-03-25)
   - Updated directory structure
